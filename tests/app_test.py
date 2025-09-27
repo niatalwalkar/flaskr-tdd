@@ -100,8 +100,38 @@ def test_messages(client):
     assert b"&lt;Hello&gt;" in rv.data
     assert b"<strong>HTML</strong> allowed here" in rv.data
 
+
+
+
 def test_delete_message(client):
     """Ensure the messages are being deleted"""
-    rv = client.get('/delete/1')
+    rv = client.get("/delete/1")
+    data = json.loads(rv.data)
+    assert data["status"] == 0
+    login(client, app.config["USERNAME"], app.config["PASSWORD"])
+    rv = client.get("/delete/1")
     data = json.loads(rv.data)
     assert data["status"] == 1
+
+import json
+
+def test_delete_message_requires_login(client, app=app):
+    # Try to delete without logging in
+    rv = client.get("/delete/1")
+    data = json.loads(rv.data)
+    assert data["status"] == 0
+    assert data["message"] == "Please log in."
+
+    # Log in
+    login(client, app.config["USERNAME"], app.config["PASSWORD"])
+    # Add a post to delete (if needed, depending on your setup)
+    client.post(
+        "/add",
+        data=dict(title="Test Post", text="Test Content"),
+        follow_redirects=True,
+    )
+    # Try to delete after logging in
+    rv = client.get("/delete/1")
+    data = json.loads(rv.data)
+    assert data["status"] == 1
+    assert data["message"] == "Post Deleted"
